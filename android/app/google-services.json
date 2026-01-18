@@ -1,0 +1,62 @@
+{
+  "project_info": {
+    "project_number": "691132595156",
+    "project_id": "health-hta-app",
+    "storage_bucket": "health-hta-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:691132595156:android:a53276133bf29b8959b441",
+        "android_client_info": {
+          "package_name": "com.rzlandr.htapps"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "691132595156-6hene2j3i4pj0i1pm3vevaj41251e0qt.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.rzlandr.htapps",
+            "certificate_hash": "dd9b3e42f37441a3efea6aaf0d2be1b649c9be60"
+          }
+        },
+        {
+          "client_id": "691132595156-g6696b3l59qntni6tlr8fckddkhhcjac.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.rzlandr.htapps",
+            "certificate_hash": "46d13ce4820e7afe7896256743f4b071925625e1"
+          }
+        },
+        {
+          "client_id": "691132595156-5ekj52hq76c1rvhhjtrc7dcbf7ugi8s8.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAsT8obMCtqp3lnfSZtIwE7U7QHxnWTV1k"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "691132595156-5ekj52hq76c1rvhhjtrc7dcbf7ugi8s8.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "691132595156-10n4jhg981fmkfnln9g16v3lm62dcgnb.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.hypnotherapistApp"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
