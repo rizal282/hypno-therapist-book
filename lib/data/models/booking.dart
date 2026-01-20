@@ -1,5 +1,22 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+enum BookingStatus {
+  pending(0),
+  accepted(1),
+  completed(2),
+  cancelled(3);
+
+  final int code;
+  const BookingStatus(this.code);
+
+  static BookingStatus fromCode(int code) {
+    return BookingStatus.values.firstWhere(
+      (e) => e.code == code,
+      orElse: () => BookingStatus.pending,
+    );
+  }
+}
+
 class Booking {
   final String? id;
   final String userId;
@@ -9,6 +26,8 @@ class Booking {
   final String complaint;
   final DateTime scheduledTime;
   final DateTime createdAt;
+  final BookingStatus status;
+  final String? rejectionReason;
 
   Booking({
     this.id,
@@ -19,6 +38,8 @@ class Booking {
     required this.complaint,
     required this.scheduledTime,
     required this.createdAt,
+    this.status = BookingStatus.pending,
+    this.rejectionReason,
   });
 
   Map<String, dynamic> toMap() {
@@ -30,6 +51,8 @@ class Booking {
       'complaint': complaint,
       'scheduledTime': Timestamp.fromDate(scheduledTime),
       'createdAt': Timestamp.fromDate(createdAt),
+      'status': status.code,
+      'rejectionReason': rejectionReason,
     };
   }
 
@@ -43,6 +66,8 @@ class Booking {
       complaint: map['complaint'] ?? '',
       scheduledTime: (map['scheduledTime'] as Timestamp).toDate(),
       createdAt: (map['createdAt'] as Timestamp).toDate(),
+      status: BookingStatus.fromCode(map['status'] as int? ?? 0),
+      rejectionReason: map['rejectionReason'] as String?,
     );
   }
 }

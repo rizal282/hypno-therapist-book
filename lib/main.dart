@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'blocs/therapist/therapist_bloc.dart';
 import 'blocs/therapist/therapist_event.dart';
 import 'blocs/auth/auth_bloc.dart';
@@ -12,7 +13,8 @@ import 'presentation/screens/login_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(); // Pastikan sudah menjalankan 'flutterfire configure'
+  await Firebase.initializeApp(); 
+  await initializeDateFormatting('id_ID', null);
   runApp(const HypnotherapistApp());
 }
 

@@ -11,3 +11,8 @@ class LoadBookings extends BookingEvent {
   final String userId;
   LoadBookings(this.userId);
 }
+
+class CancelBooking extends BookingEvent {
+  final Booking booking;
+  CancelBooking(this.booking);
+}

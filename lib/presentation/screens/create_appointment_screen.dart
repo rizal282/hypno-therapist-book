@@ -1,16 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:geolocator/geolocator.dart';
-import 'package:geocoding/geocoding.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:hypnotherapist_app/data/models/therapist.dart';
+import 'package:hypnotherapist_app/presentation/widgets/personal_data_section_book.dart';
+import 'package:hypnotherapist_app/presentation/widgets/schedule_section_book.dart';
+import 'package:hypnotherapist_app/presentation/widgets/submit_button.dart';
 import '../../../../blocs/booking/booking_bloc.dart';
 import '../../../../blocs/booking/booking_event.dart';
 import '../../../../blocs/booking/booking_state.dart';
-import '../../../../data/models/booking.dart';
+import '../controllers/create_appointment_form_controller.dart';
 
 class CreateAppointmentScreen extends StatefulWidget {
-  const CreateAppointmentScreen({super.key});
+  final Therapist therapist;
+
+  const CreateAppointmentScreen({super.key, required this.therapist});
 
   @override
   State<CreateAppointmentScreen> createState() =>
@@ -18,137 +20,99 @@ class CreateAppointmentScreen extends StatefulWidget {
 }
 
 class _CreateAppointmentScreenState extends State<CreateAppointmentScreen> {
-  final _formKey = GlobalKey<FormState>();
-  // Controller untuk mengambil input teks
-  final _nameController = TextEditingController();
-  final _phoneController = TextEditingController();
-  final _addressController = TextEditingController();
-  final _complaintController = TextEditingController();
+  late final CreateAppointmentFormController _controller;
 
-  // Variabel untuk menyimpan tanggal dan waktu
-  DateTime _selectedDate = DateTime.now();
-  TimeOfDay _selectedTime = TimeOfDay.now();
-  bool _isLoadingLocation = false;
+  @override
+  void initState() {
+    super.initState();
+    _controller = CreateAppointmentFormController();
+  }
 
-  Future<void> _getCurrentLocation() async {
-    setState(() => _isLoadingLocation = true);
-    try {
-      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) {
-        throw Exception('Layanan lokasi tidak aktif');
-      }
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
 
-      LocationPermission permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-        if (permission == LocationPermission.denied) {
-          throw Exception('Izin lokasi ditolak');
-        }
-      }
-
-      if (permission == LocationPermission.deniedForever) {
-        throw Exception('Izin lokasi ditolak secara permanen');
-      }
-
-      Position position = await Geolocator.getCurrentPosition();
-      List<Placemark> placemarks = await placemarkFromCoordinates(
-        position.latitude,
-        position.longitude,
+  void _submitBooking() {
+    final booking = _controller.validateAndCreateBooking();
+    if (booking != null) {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Konfirmasi Booking'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                    'Mohon periksa kembali data berikut sebelum mengirim:'),
+                const SizedBox(height: 16),
+                _buildPreviewRow('Nama', booking.userName),
+                _buildPreviewRow('No. HP', booking.phoneNumber),
+                _buildPreviewRow('Alamat', booking.address),
+                _buildPreviewRow('Keluhan', booking.complaint),
+                const Divider(),
+                _buildPreviewRow(
+                    'Tanggal',
+                    '${_controller.selectedDate.day}/${_controller.selectedDate.month}/${_controller.selectedDate.year}'),
+                _buildPreviewRow(
+                    'Jam', _controller.selectedTime.format(context)),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Edit'),
+            ),
+            FilledButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                context.read<BookingBloc>().add(CreateBooking(booking));
+              },
+              child: const Text('Kirim'),
+            ),
+          ],
+        ),
       );
-
-      if (placemarks.isNotEmpty) {
-        Placemark place = placemarks[0];
-        String address = [
-          place.street,
-          place.subLocality,
-          place.locality,
-          place.postalCode,
-        ].where((e) => e != null && e.isNotEmpty).join(', ');
-        _addressController.text = address;
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error: $e')));
-    } finally {
-      setState(() => _isLoadingLocation = false);
     }
   }
 
-  // Fungsi memilih tanggal
-  Future<void> _pickDate() async {
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: _selectedDate,
-      firstDate: DateTime.now(),
-      lastDate: DateTime(2101),
+  Widget _buildPreviewRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 70,
+            child: Text(
+              '$label:',
+              style: const TextStyle(
+                  fontWeight: FontWeight.bold, color: Colors.grey),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(fontWeight: FontWeight.w500),
+            ),
+          ),
+        ],
+      ),
     );
-    if (picked != null && picked != _selectedDate) {
-      setState(() {
-        _selectedDate = picked;
-      });
-    }
-  }
-
-  // Fungsi memilih waktu
-  Future<void> _pickTime() async {
-    final TimeOfDay? picked = await showTimePicker(
-      context: context,
-      initialTime: _selectedTime,
-    );
-    if (picked != null && picked != _selectedTime) {
-      setState(() {
-        _selectedTime = picked;
-      });
-    }
-  }
-
-  String? _encodeQueryParameters(Map<String, String> params) {
-    return params.entries
-        .map(
-          (MapEntry<String, String> e) =>
-              '${Uri.encodeComponent(e.key)}=${Uri.encodeComponent(e.value)}',
-        )
-        .join('&');
-  }
-
-  Future<void> _sendEmailToTherapist() async {
-    final String subject = 'Booking Baru: ${_nameController.text}';
-    final String body =
-        '''
-          Halo Therapist,
-
-          Terdapat booking baru dengan detail berikut:
-          Nama: ${_nameController.text}
-          No HP: ${_phoneController.text}
-          Alamat: ${_addressController.text}
-          Keluhan: ${_complaintController.text}
-          Jadwal: ${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year} - ${_selectedTime.format(context)}
-
-          Mohon segera diproses.
-          ''';
-
-    final Uri emailLaunchUri = Uri(
-      scheme: 'mailto',
-      path:
-          'nursyifaazkia9@gmail.com', // Ganti dengan email terapis yang sebenarnya
-      query: _encodeQueryParameters(<String, String>{
-        'subject': subject,
-        'body': body,
-      }),
-    );
-
-    if (await canLaunchUrl(emailLaunchUri)) {
-      await launchUrl(emailLaunchUri);
-    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final therapist = widget.therapist;
+
     return BlocListener<BookingBloc, BookingState>(
       listener: (context, state) {
         if (state is BookingSuccess) {
-          _sendEmailToTherapist();
+          _controller.sendEmailToTherapist(context, therapist);
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Booking berhasil disimpan!')),
           );
@@ -164,162 +128,39 @@ class _CreateAppointmentScreenState extends State<CreateAppointmentScreen> {
           title: const Text('Booking Sesi Terapi'),
           backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         ),
-        body: SingleChildScrollView(
-          padding: const EdgeInsets.all(16.0),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Data Diri Anda',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 10),
-                TextFormField(
-                  controller: _nameController,
-                  decoration: const InputDecoration(
-                    labelText: 'Nama Lengkap Anda',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.person),
-                  ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Nama tidak boleh kosong';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _phoneController,
-                  decoration: const InputDecoration(
-                    labelText: 'Nomor HP / WhatsApp',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.phone),
-                  ),
-                  keyboardType: TextInputType.phone,
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Nomor HP tidak boleh kosong';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _addressController,
-                  decoration: InputDecoration(
-                    labelText: 'Alamat Saat Ini',
-                    border: const OutlineInputBorder(),
-                    prefixIcon: const Icon(Icons.location_on),
-                    suffixIcon: IconButton(
-                      onPressed: _isLoadingLocation
-                          ? null
-                          : _getCurrentLocation,
-                      icon: _isLoadingLocation
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : const Icon(Icons.my_location),
-                    ),
-                  ),
-                  maxLines: 2,
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Alamat tidak boleh kosong';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _complaintController,
-                  decoration: const InputDecoration(
-                    labelText: 'Keluhan / Isu Utama',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.healing),
-                  ),
-                  maxLines: 2,
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Keluhan tidak boleh kosong';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 24),
-                const Text(
-                  'Pilih Jadwal Sesi',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 10),
-                Row(
+        body: AnimatedBuilder(
+          animation: _controller,
+          builder: (context, child) {
+            return SingleChildScrollView(
+              padding: const EdgeInsets.all(16.0),
+              child: Form(
+                key: _controller.formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: _pickDate,
-                        icon: const Icon(Icons.calendar_today),
-                        label: Text(
-                          "${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}",
-                        ),
-                      ),
+                    PersonalDataSectionBook(
+                      nameController: _controller.nameController,
+                      phoneController: _controller.phoneController,
+                      addressController: _controller.addressController,
+                      complaintController: _controller.complaintController,
+                      isLoadingLocation: _controller.isLoadingLocation,
+                      onGetLocation: () =>
+                          _controller.getCurrentLocation(context),
                     ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: _pickTime,
-                        icon: const Icon(Icons.access_time),
-                        label: Text(_selectedTime.format(context)),
-                      ),
+                    const SizedBox(height: 24),
+                    ScheduleSectionBook(
+                      selectedDate: _controller.selectedDate,
+                      selectedTime: _controller.selectedTime,
+                      onPickDate: () => _controller.pickDate(context),
+                      onPickTime: () => _controller.pickTime(context),
                     ),
+                    const SizedBox(height: 32),
+                    SubmitButton(onPressed: _submitBooking),
                   ],
                 ),
-                const SizedBox(height: 32),
-                SizedBox(
-                  width: double.infinity,
-                  height: 50,
-                  child: BlocBuilder<BookingBloc, BookingState>(
-                    builder: (context, state) {
-                      if (state is BookingLoading) {
-                        return const Center(child: CircularProgressIndicator());
-                      }
-                      return FilledButton(
-                        onPressed: () {
-                          if (_formKey.currentState!.validate()) {
-                            final user = FirebaseAuth.instance.currentUser;
-                            if (user == null) return;
-
-                            final booking = Booking(
-                              userId: user.uid,
-                              userName: _nameController.text,
-                              phoneNumber: _phoneController.text,
-                              address: _addressController.text,
-                              complaint: _complaintController.text,
-                              scheduledTime: DateTime(
-                                _selectedDate.year,
-                                _selectedDate.month,
-                                _selectedDate.day,
-                                _selectedTime.hour,
-                                _selectedTime.minute,
-                              ),
-                              createdAt: DateTime.now(),
-                            );
-                            context.read<BookingBloc>().add(
-                              CreateBooking(booking),
-                            );
-                          }
-                        },
-                        child: const Text('Konfirmasi Booking'),
-                      );
-                    },
-                  ),
-                ),
-              ],
-            ),
-          ),
+              ),
+            );
+          },
         ),
       ),
     );
