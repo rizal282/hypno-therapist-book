@@ -2,14 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:intl/date_symbol_data_local.dart';
-import 'blocs/therapist/therapist_bloc.dart';
-import 'blocs/therapist/therapist_event.dart';
-import 'blocs/auth/auth_bloc.dart';
-import 'blocs/auth/auth_event.dart';
-import 'blocs/auth/auth_state.dart';
-import 'blocs/booking/booking_bloc.dart';
-import 'presentation/screens/home_screen.dart';
-import 'presentation/screens/login_screen.dart';
+import 'features/therapist/presentation/bloc/therapist_bloc.dart';
+import 'features/therapist/presentation/bloc/therapist_event.dart';
+import 'features/auth/presentation/bloc/auth_bloc.dart';
+import 'features/auth/presentation/bloc/auth_event.dart';
+import 'features/auth/presentation/bloc/auth_state.dart';
+import 'features/booking/presentation/bloc/booking_bloc.dart';
+import 'features/auth/presentation/screen/home_screen.dart';
+import 'features/auth/presentation/screen/login_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
